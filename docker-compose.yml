@@ -5,7 +5,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile.prod
-    command: gunicorn keywordcounter.wsgi:application --bind 0.0.0.0:8080
+    command: gunicorn keywordcounter.wsgi:application --bind 0.0.0.0:8000
     volumes: 
       - static_volume:/home/app/web/staticfiles
     expose: 
@@ -30,8 +30,8 @@ services:
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/var/www/certbot
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     depends_on:
       - web
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
