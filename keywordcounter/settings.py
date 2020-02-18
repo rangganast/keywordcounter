@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'keywordcounter.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE':
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'keywordcounterDB',
         'USER': 'iamsuperuser',
         'PASSWORD': 'highestofhighest',
