@@ -24,7 +24,7 @@ SECRET_KEY = 'qs$&dq7m2z7dxc4#3hdv^=hz)6p=!(uv1vg(rkz2h2dw&7m%$&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 0
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+ALLOWED_HOSTS = ["keywords-log-qa.holahalo.dev", "localhost"]
 
 
 # Application definition
@@ -78,12 +78,12 @@ WSGI_APPLICATION = 'keywordcounter.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'keywordcounterDB',
         'USER': 'iamsuperuser',
         'PASSWORD': 'highestofhighest',
-        'HOST': 'db',
-        'PORT': 5432,
+        'HOST': 'localhost',
+        'PORT': '',
     }
 }
 
@@ -124,8 +124,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_URL = '/staticfiles/'
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
