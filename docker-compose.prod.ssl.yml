@@ -6,7 +6,7 @@ services:
     container_name: postgres-db-prod
     environment:
       - POSTGRES_DB=keywordcounterDB
-      - POSTGRES_USER=iamsuper
+      - POSTGRES_USER=iamsuperuser
       - POSTGRES_PASSWORD=highestofhighest
       - POSTGRES_HOST=127.0.0.1
     volumes:
