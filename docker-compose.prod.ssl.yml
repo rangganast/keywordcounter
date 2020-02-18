@@ -3,7 +3,7 @@ version: "3"
 services:
   db:
     image: postgres
-    container_name: postgres-db-prod
+    container_name: keywordcounter-postgres-db
     environment:
       - POSTGRES_DB=keywordcounterDB
       - POSTGRES_USER=iamsuperuser
@@ -42,11 +42,12 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile.prod
-    container_name: django-web-prod
+    container_name: keywordcounter-web
+    container_name: keywordcounter-web
     restart: on-failure
     volumes:
       - .:/code
-    command: bash -c "python manage.py makemigrations api --noinput && python manage.py migrate --noinput &&  gunicorn django_docker_setup.wsgi:application --bind 0.0.0.0:8000"
+    command: bash -c "python manage.py makemigrations api --noinput && python manage.py migrate --noinput &&  gunicorn keywordcounter.wsgi:application --bind 0.0.0.0:8000"
     ports:
       - "8000:8000"
     depends_on:
