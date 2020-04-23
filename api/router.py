@@ -1,7 +1,7 @@
 from rest_framework import routers
 from .views import KeywordHistoryViewSet, KeywordCountViewSet, KeywordListViewSet
 
-router = routers.DefaultRouter()
+router = routers.SimpleRouter(trailing_slash=False)
 
 router.register('list', KeywordListViewSet)
 router.register('search', KeywordHistoryViewSet)

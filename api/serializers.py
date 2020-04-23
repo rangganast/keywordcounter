@@ -4,20 +4,19 @@ from rest_framework import serializers, mixins
 from django.contrib.auth.models import User
 from .models import Keyword, KeywordHistory
 
-
 class KeywordSerializer(serializers.ModelSerializer):
     class Meta:
         model = Keyword
         fields = ('id', 'keyword', 'last_created')
-        depth = 1
+        depth = 2
 
 
 class KeywordHistorySerializer(serializers.ModelSerializer):
-    keywords = KeywordSerializer()
+    keyword = serializers.CharField(source='keywords.keyword')
 
     class Meta:
         model = KeywordHistory
-        fields = ('id', 'date_created', 'time_created', 'keywords')
+        fields = ('id', 'date_created', 'time_created', 'keyword')
 
     def create(self, validated_data):
         keyword = validated_data.pop('keywords')
