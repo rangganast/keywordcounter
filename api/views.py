@@ -1,4 +1,5 @@
 import datetime
+from rest_framework import status
 from django.db.models import Count, Q, Value, CharField, F, Subquery, Max, Min, OuterRef
 from django.http import JsonResponse
 from rest_framework import viewsets, mixins
@@ -6,7 +7,7 @@ from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from .models import Keyword, KeywordHistory
-from .serializers import KeywordSerializer, KeywordHistorySerializer, KeywordCountSerializer, KeywordStatSerializer
+from .serializers import KeywordSerializer, KeywordHistorySerializer, KeywordCountSerializer, KeywordStatSerializer, KeywordIpDetailSerializer, LoadRegionsSerializer
 
 class KeywordListViewSet(viewsets.ModelViewSet):
     queryset = Keyword.objects.all().order_by('pk')
@@ -27,7 +28,7 @@ class KeywordHistoryViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'head']
 
 class KeywordCountViewSet(viewsets.ModelViewSet):
-    queryset = Keyword.objects.all()
+    queryset = Keyword.objects.all().order_by('pk')
     serializer_class = KeywordCountSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'head']
@@ -54,6 +55,8 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
             ).order_by('-last_created'))
 
         for query in queryset:
+            if query['lastscrape_date']:
+                query['lastscrape_date'] = datetime.datetime.strptime(str(query['lastscrape_date']), '%Y-%m-%d').strftime('%d-%m-%Y')
             query['keyword_ip'] = list(filter(lambda x: x["id"] == query['id'], jsonlist))[0]['keyword_ip']
 
         date1 = self.request.GET.get("date1")
@@ -87,3 +90,39 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
                 query['keyword_ip'] = list(filter(lambda x: x["keyword_id"] == query['keyword_id'], jsonlist))[0]['keyword_ip']
 
         return JsonResponse(queryset, safe=False)
+
+class KeywordIpDetailViewSet(viewsets.ModelViewSet):
+    queryset = KeywordHistory.objects.all().order_by('pk')
+    serializer_class = KeywordIpDetailSerializer
+    permission_classes = [DjangoModelPermissions]
+    http_method_names = ['get', 'head']
+
+    def retrieve(self, request, pk):
+        queryset = list(KeywordHistory.objects.filter(keywords=pk).values('keyword_ip').annotate(
+            keyword=F('keywords__keyword'),
+            keyword_ip_country_id=F('keyword_ip_country_id'),
+            keyword_ip_country=F('keyword_ip_country'),
+            keyword_ip_region=F('keyword_ip_region'),
+            keyword_ip_city=F('keyword_ip_city'),
+            count=Count('keyword_ip'),
+            ).order_by('-count'))
+        
+        if not queryset:
+            return JsonResponse({'detail' : 'not found'}, safe=False)
+
+        return JsonResponse(queryset, safe=False)
+
+class LoadRegionsViewset(viewsets.ModelViewSet):
+    queryset = KeywordHistory.objects.all().order_by('pk')
+    serializer_class = LoadRegionsSerializer
+    permission_classes = [DjangoModelPermissions]
+    http_method_names = ['get', 'head']
+
+    def get_queryset(self):
+        country = self.request.GET.get('country')
+        pk = self.request.GET.get('keyword_id')
+
+        queryset = KeywordHistory.objects.filter(keywords=pk, keyword_ip_country=country)
+
+        return queryset
+        

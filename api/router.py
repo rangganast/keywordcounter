@@ -1,9 +1,11 @@
 from rest_framework import routers
-from .views import KeywordHistoryViewSet, KeywordCountViewSet, KeywordListViewSet, KeywordStatViewSet
+from . import views
 
 router = routers.SimpleRouter(trailing_slash=False)
 
-router.register('list', KeywordListViewSet)
-router.register('search', KeywordHistoryViewSet)
-router.register('count', KeywordCountViewSet)
-router.register('scrape', KeywordStatViewSet)
+router.register('list', views.KeywordListViewSet)
+router.register('search', views.KeywordHistoryViewSet)
+router.register('count', views.KeywordCountViewSet)
+router.register('ip', views.KeywordIpDetailViewSet)
+router.register('scrape', views.KeywordStatViewSet)
+router.register('ajax/load-regions', views.LoadRegionsViewset)

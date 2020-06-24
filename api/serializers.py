@@ -10,7 +10,6 @@ from rest_framework import serializers, mixins
 from django.contrib.auth.models import User
 from .models import Keyword, KeywordHistory
 
-
 class KeywordSerializer(serializers.ModelSerializer):
     class Meta:
         model = Keyword
@@ -49,26 +48,35 @@ class KeywordHistorySerializer(serializers.ModelSerializer):
         else:
             Keyword.objects.filter(keyword=keyword['keyword'].lower()).update(last_created=timezone.now())
 
-        # keyword_ip = validated_data.pop('keyword_ip')
+        # keyword_ip = validated_data['keyword_ip']
         # if keyword_ip:
         #     url = 'https://ipinfo.io/' + keyword_ip + '/json'
         #     try:
         #         res = urllib.request.urlopen(url)
         #         data = json.load(res)
-        #         if data['country']:
-        #             validated_data['keyword_ip'] = pycountry.countries.get(alpha_2=data['country']).name
+
+        #         if 'country' in data:
+        #             validated_data['keyword_ip_country_id'] = data['country']
+        #             validated_data['keyword_ip_country'] = pycountry.countries.get(alpha_2=data['country']).name
+        #             validated_data['keyword_ip_region'] = data['region']
+        #             validated_data['keyword_ip_city'] = data['city']
         #         else:
         #             validated_data['keyword_ip'] = None
+        #             validated_data['keyword_ip_country_id'] = None
+        #             validated_data['keyword_ip_country'] = None
+        #             validated_data['keyword_ip_region'] = None
+        #             validated_data['keyword_ip_city'] = None
+
 
         #     except urllib.error.HTTPError:
         #         validated_data['keyword_ip'] = None
-        # else:
-        #     pass
-        
+        #         validated_data['keyword_ip_country_id'] = None
+        #         validated_data['keyword_ip_country'] = None
+        #         validated_data['keyword_ip_region'] = None
+        #         validated_data['keyword_ip_city'] = None
 
         history_instance = KeywordHistory.objects.create(**validated_data, keywords=keyword_instance)
         return history_instance
-
 
 class KeywordCountSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
@@ -82,3 +90,16 @@ class KeywordCountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Keyword
         fields = ('id', 'keyword', 'keyword_ip', 'holahalo_website', 'holahalo_mobile_website', 'holahalo_android', 'lastscrape_date', 'lastscrape_time', 'lastscrape_products', 'keyword_count')
+
+class KeywordIpDetailSerializer(serializers.ModelSerializer):
+    count = serializers.IntegerField()
+    keyword = serializers.CharField()
+
+    class Meta:
+        model = KeywordHistory
+        fields = ('keyword', 'keyword_ip', 'keyword_ip_country_id', 'keyword_ip_country', 'keyword_ip_region', 'keyword_ip_city', 'count')
+
+class LoadRegionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KeywordHistory
+        fields = ('keyword_ip_region',)

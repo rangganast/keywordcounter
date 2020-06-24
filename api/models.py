@@ -13,6 +13,10 @@ class Keyword(models.Model):
 class KeywordHistory(models.Model):
     keywords = models.ForeignKey(Keyword, on_delete=models.CASCADE, related_name='keywords')
     keyword_ip = models.CharField(max_length=20, null=True, blank=True, default=None)
+    keyword_ip_country_id = models.CharField(max_length=3, null=True, blank=True, default=None)
+    keyword_ip_country = models.CharField(max_length=30, null=True, blank=True, default=None)
+    keyword_ip_region = models.CharField(max_length=30, null=True, blank=True, default=None)
+    keyword_ip_city = models.CharField(max_length=30, null=True, blank=True, default=None)
     source = models.CharField(max_length=50, null=True, blank=True, default=None)
     date_created = models.DateField(auto_now_add=True)
     time_created = models.TimeField(auto_now_add=True)
