@@ -103,3 +103,8 @@ class LoadRegionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = KeywordHistory
         fields = ('keyword_ip_region',)
+
+class LoadCitiesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KeywordHistory
+        fields = ('keyword_ip_city',)

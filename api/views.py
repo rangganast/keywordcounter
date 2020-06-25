@@ -7,7 +7,7 @@ from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from .models import Keyword, KeywordHistory
-from .serializers import KeywordSerializer, KeywordHistorySerializer, KeywordCountSerializer, KeywordStatSerializer, KeywordIpDetailSerializer, LoadRegionsSerializer
+from .serializers import KeywordSerializer, KeywordHistorySerializer, KeywordCountSerializer, KeywordStatSerializer, KeywordIpDetailSerializer, LoadRegionsSerializer, LoadCitiesSerializer
 
 class KeywordListViewSet(viewsets.ModelViewSet):
     queryset = Keyword.objects.all().order_by('pk')
@@ -73,13 +73,16 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
             jsonlist = []
             for keyword in keywords:
                 queryset = KeywordHistory.objects.filter(keywords=keyword.id, date_created__range=[date1, date2]).values('keyword_ip').annotate(
-                    keyword_id=F('keywords__id'),
+                    id=F('keywords__id'),
                     keyword_count=Count('keyword_ip')
                     ).order_by('-keyword_count')
                 jsonlist.append(queryset[0])
 
             queryset = list(Keyword.objects.filter(keywords__date_created__range=[date1, date2]).values('keyword').annotate(
-                keyword_id=F('id'),
+                id=F('id'),
+                lastscrape_date=F('lastscrape_date'),
+                lastscrape_time=F('lastscrape_time'),
+                lastscrape_products=F('lastscrape_products'),
                 keyword_count=Count('keywords__id'),
                 holahalo_website=Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
                 holahalo_mobile_website=Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
@@ -87,7 +90,7 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
                 ).order_by('-last_created'))
 
             for query in queryset:
-                query['keyword_ip'] = list(filter(lambda x: x["keyword_id"] == query['keyword_id'], jsonlist))[0]['keyword_ip']
+                query['keyword_ip'] = list(filter(lambda x: x["id"] == query['id'], jsonlist))[0]['keyword_ip']
 
         return JsonResponse(queryset, safe=False)
 
@@ -123,6 +126,21 @@ class LoadRegionsViewset(viewsets.ModelViewSet):
         pk = self.request.GET.get('keyword_id')
 
         queryset = KeywordHistory.objects.filter(keywords=pk, keyword_ip_country=country)
+
+        return queryset
+
+class LoadCitiesViewset(viewsets.ModelViewSet):
+    queryset = KeywordHistory.objects.all().order_by('pk')
+    serializer_class = LoadCitiesSerializer
+    permission_classes = [DjangoModelPermissions]
+    http_method_names = ['get', 'head']
+
+    def get_queryset(self):
+        country = self.request.GET.get('country')
+        region = self.request.GET.get('region')
+        pk = self.request.GET.get('keyword_id')
+
+        queryset = KeywordHistory.objects.filter(keywords=pk, keyword_ip_country=country, keyword_ip_region=region)
 
         return queryset
         
