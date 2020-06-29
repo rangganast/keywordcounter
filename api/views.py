@@ -1,35 +1,39 @@
 import datetime
-from rest_framework import status
-from django.db.models import Count, Q, Value, CharField, F, Subquery, Max, Min, OuterRef
+from django.db.models import Count, Q, Value, CharField, F, Func
+from django.db.models.functions import Concat
 from django.http import JsonResponse
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from rest_framework import status
 from rest_framework import viewsets, mixins
 from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
-from django.contrib.auth import authenticate
+from drf_renderer_xlsx.mixins import XLSXFileMixin
+from drf_renderer_xlsx.renderers import XLSXRenderer
 from .models import Keyword, KeywordHistory
-from .serializers import KeywordSerializer, KeywordHistorySerializer, KeywordCountSerializer, KeywordStatSerializer, KeywordIpDetailSerializer, LoadRegionsSerializer, LoadCitiesSerializer
+from . import serializers
 
 class KeywordListViewSet(viewsets.ModelViewSet):
     queryset = Keyword.objects.all().order_by('pk')
-    serializer_class = KeywordSerializer
+    serializer_class = serializers.KeywordSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'head']
 
 class KeywordStatViewSet(viewsets.ModelViewSet):
     queryset = Keyword.objects.all().order_by('pk')
-    serializer_class = KeywordStatSerializer
+    serializer_class = serializers.KeywordStatSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['post', 'head']
 
 class KeywordHistoryViewSet(viewsets.ModelViewSet):
     queryset = KeywordHistory.objects.all().order_by('pk')
-    serializer_class = KeywordHistorySerializer
+    serializer_class = serializers.KeywordHistorySerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'post', 'head']
 
 class KeywordCountViewSet(viewsets.ModelViewSet):
     queryset = Keyword.objects.all().order_by('pk')
-    serializer_class = KeywordCountSerializer
+    serializer_class = serializers.KeywordCountSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'head']
 
@@ -45,7 +49,7 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
 
         queryset = list(Keyword.objects.filter(keywords__date_created__range=[datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()]).values('keyword').annotate(
             id=F('id'),
-            lastscrape_date=F('lastscrape_date'),
+            lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', outputfield=CharField()),
             lastscrape_time=F('lastscrape_time'),
             lastscrape_products=F('lastscrape_products'),
             keyword_count=Count('keywords__id'),
@@ -55,8 +59,6 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
             ).order_by('-last_created'))
 
         for query in queryset:
-            if query['lastscrape_date']:
-                query['lastscrape_date'] = datetime.datetime.strptime(str(query['lastscrape_date']), '%Y-%m-%d').strftime('%d-%m-%Y')
             query['keyword_ip'] = list(filter(lambda x: x["id"] == query['id'], jsonlist))[0]['keyword_ip']
 
         date1 = self.request.GET.get("date1")
@@ -80,7 +82,7 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
 
             queryset = list(Keyword.objects.filter(keywords__date_created__range=[date1, date2]).values('keyword').annotate(
                 id=F('id'),
-                lastscrape_date=F('lastscrape_date'),
+                lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', outputfield=CharField()),
                 lastscrape_time=F('lastscrape_time'),
                 lastscrape_products=F('lastscrape_products'),
                 keyword_count=Count('keywords__id'),
@@ -92,11 +94,11 @@ class KeywordCountViewSet(viewsets.ModelViewSet):
             for query in queryset:
                 query['keyword_ip'] = list(filter(lambda x: x["id"] == query['id'], jsonlist))[0]['keyword_ip']
 
-        return JsonResponse(queryset, safe=False)
+        return JsonResponse(queryset, safe=False) 
 
 class KeywordIpDetailViewSet(viewsets.ModelViewSet):
     queryset = KeywordHistory.objects.all().order_by('pk')
-    serializer_class = KeywordIpDetailSerializer
+    serializer_class = serializers.KeywordIpDetailSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'head']
 
@@ -115,9 +117,9 @@ class KeywordIpDetailViewSet(viewsets.ModelViewSet):
 
         return JsonResponse(queryset, safe=False)
 
-class LoadRegionsViewset(viewsets.ModelViewSet):
+class LoadRegionsViewSet(viewsets.ModelViewSet):
     queryset = KeywordHistory.objects.all().order_by('pk')
-    serializer_class = LoadRegionsSerializer
+    serializer_class = serializers.LoadRegionsSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'head']
 
@@ -129,9 +131,9 @@ class LoadRegionsViewset(viewsets.ModelViewSet):
 
         return queryset
 
-class LoadCitiesViewset(viewsets.ModelViewSet):
+class LoadCitiesViewSet(viewsets.ModelViewSet):
     queryset = KeywordHistory.objects.all().order_by('pk')
-    serializer_class = LoadCitiesSerializer
+    serializer_class = serializers.LoadCitiesSerializer
     permission_classes = [DjangoModelPermissions]
     http_method_names = ['get', 'head']
 
@@ -143,4 +145,67 @@ class LoadCitiesViewset(viewsets.ModelViewSet):
         queryset = KeywordHistory.objects.filter(keywords=pk, keyword_ip_country=country, keyword_ip_region=region)
 
         return queryset
-        
+
+class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
+    queryset = Keyword.objects.filter(keywords__date_created__range=[datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()]).values('keyword').annotate(
+            lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+            lastscrape_time=F('lastscrape_time'),
+            lastscrape_products=F('lastscrape_products'),
+            keyword_ip=Value('', output_field=CharField()),
+            keyword_count=Count('keywords__id'),
+            source=Concat(
+                Value('Holahalo Website: '),
+                Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
+                Value('\nHolahalo Mobile Website: '),
+                Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
+                Value('\nHolahalo Android: '),
+                Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
+                output_field=CharField()),
+            ).order_by('-last_created')
+    serializer_class = serializers.XLSXExportSerializer
+    renderer_classes = [XLSXRenderer]
+    column_header = {
+        'titles' : [
+            "Keyword",
+            "Sumber Keyword",
+            "IP Pencarian",
+            "Jumlah Pencarian Keyword",
+            "Tanggal",
+            "Jam",
+            "Jumlah Total Produk",
+        ],
+        'column_width': [20, 40, 20, 40, 20, 20, 20],
+        'height' : 20,
+        'style' : {
+            'fill': {
+                'fill_type': 'solid',
+                'start_color': 'CCCCCC',
+            },
+            'border_side': {
+                'border_style': 'thin',
+                'color': 'FF000000',
+            },
+            'font': {
+                'name': 'Calibri',
+                'size': 11,
+                'bold': True,
+                'color': 'FF000000',
+            },
+        }
+    }
+    body = {
+        'style' : {
+            'border_side': {
+                'border_style': 'thin',
+                'color': 'FF000000',
+            },
+            'alignment': {
+                'vertical': 'center',
+                'horizontal': 'left',
+                'wrapText': True,
+                'shrinkToFit' : True,
+            }
+        },
+        'height' : 60,
+    }
+    filename = 'keywords.xlsx'

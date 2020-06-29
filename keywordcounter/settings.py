@@ -130,6 +130,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
+        'drf_renderer_xlsx.renderers.XLSXRenderer',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.DjangoModelPermissions',

@@ -99,6 +99,18 @@ class KeywordIpDetailSerializer(serializers.ModelSerializer):
         model = KeywordHistory
         fields = ('keyword', 'keyword_ip', 'keyword_ip_country_id', 'keyword_ip_country', 'keyword_ip_region', 'keyword_ip_city', 'count')
 
+class XLSXExportSerializer(serializers.ModelSerializer):
+    keyword = serializers.CharField(read_only=True)
+    keyword_count = serializers.IntegerField(read_only=True)
+    keyword_ip = serializers.CharField(read_only=True)
+    source = serializers.CharField(read_only=True)
+    lastscrape_date = serializers.CharField(read_only=True)
+    lastscrape_time = serializers.CharField(read_only=True)
+    lastscrape_products = serializers.IntegerField(read_only=True)
+    class Meta:
+        model = Keyword
+        fields = ('keyword', 'source', 'keyword_ip', 'keyword_count', 'lastscrape_date', 'lastscrape_time', 'lastscrape_products',)
+
 class LoadRegionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = KeywordHistory
