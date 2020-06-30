@@ -109,7 +109,7 @@ class KeywordIpDetailViewSet(viewsets.ModelViewSet):
             keyword_ip_country=F('keyword_ip_country'),
             keyword_ip_region=F('keyword_ip_region'),
             keyword_ip_city=F('keyword_ip_city'),
-            count=Count('keyword_ip'),
+            count=Count('keywords__keyword'),
             ).order_by('-count'))
         
         if not queryset:

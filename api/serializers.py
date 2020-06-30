@@ -48,32 +48,33 @@ class KeywordHistorySerializer(serializers.ModelSerializer):
         else:
             Keyword.objects.filter(keyword=keyword['keyword'].lower()).update(last_created=timezone.now())
 
-        # keyword_ip = validated_data['keyword_ip']
-        # if keyword_ip:
-        #     url = 'https://ipinfo.io/' + keyword_ip + '/json'
-        #     try:
-        #         res = urllib.request.urlopen(url)
-        #         data = json.load(res)
+        if 'keyword_ip' in validated_data:
+            keyword_ip = validated_data['keyword_ip']
+            if keyword_ip:
+                url = 'https://ipinfo.io/' + keyword_ip + '/json'
+                try:
+                    res = urllib.request.urlopen(url)
+                    data = json.load(res)
 
-        #         if 'country' in data:
-        #             validated_data['keyword_ip_country_id'] = data['country']
-        #             validated_data['keyword_ip_country'] = pycountry.countries.get(alpha_2=data['country']).name
-        #             validated_data['keyword_ip_region'] = data['region']
-        #             validated_data['keyword_ip_city'] = data['city']
-        #         else:
-        #             validated_data['keyword_ip'] = None
-        #             validated_data['keyword_ip_country_id'] = None
-        #             validated_data['keyword_ip_country'] = None
-        #             validated_data['keyword_ip_region'] = None
-        #             validated_data['keyword_ip_city'] = None
+                    if 'country' in data:
+                        validated_data['keyword_ip_country_id'] = data['country']
+                        validated_data['keyword_ip_country'] = pycountry.countries.get(alpha_2=data['country']).name
+                        validated_data['keyword_ip_region'] = data['region']
+                        validated_data['keyword_ip_city'] = data['city']
+                    else:
+                        validated_data['keyword_ip'] = None
+                        validated_data['keyword_ip_country_id'] = None
+                        validated_data['keyword_ip_country'] = None
+                        validated_data['keyword_ip_region'] = None
+                        validated_data['keyword_ip_city'] = None
 
 
-        #     except urllib.error.HTTPError:
-        #         validated_data['keyword_ip'] = None
-        #         validated_data['keyword_ip_country_id'] = None
-        #         validated_data['keyword_ip_country'] = None
-        #         validated_data['keyword_ip_region'] = None
-        #         validated_data['keyword_ip_city'] = None
+                except urllib.error.HTTPError:
+                    validated_data['keyword_ip'] = None
+                    validated_data['keyword_ip_country_id'] = None
+                    validated_data['keyword_ip_country'] = None
+                    validated_data['keyword_ip_region'] = None
+                    validated_data['keyword_ip_city'] = None
 
         history_instance = KeywordHistory.objects.create(**validated_data, keywords=keyword_instance)
         return history_instance
