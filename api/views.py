@@ -209,3 +209,25 @@ class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
         'height' : 60,
     }
     filename = 'keywords.xlsx'
+
+    def get_queryset(self):
+        date1 = self.request.GET.get("date1")
+        date2 = self.request.GET.get("date2")
+
+        queryset = Keyword.objects.filter(keywords__date_created__range=[date1, date2]).values('keyword').annotate(
+                lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+                lastscrape_time=F('lastscrape_time'),
+                lastscrape_products=F('lastscrape_products'),
+                keyword_ip=Value('', output_field=CharField()),
+                keyword_count=Count('keywords__id'),
+                source=Concat(
+                    Value('Holahalo Website: '),
+                    Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
+                    Value('\nHolahalo Mobile Website: '),
+                    Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
+                    Value('\nHolahalo Android: '),
+                    Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
+                    output_field=CharField()),
+                ).order_by('-last_created')
+
+        return queryset
