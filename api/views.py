@@ -1,5 +1,5 @@
 import datetime
-from django.db.models import Count, Q, Value, CharField, F, Func
+from django.db.models import Count, Q, Value, CharField, F, Func, Max
 from django.db.models.functions import Concat
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
@@ -111,6 +111,19 @@ class KeywordIpDetailViewSet(viewsets.ModelViewSet):
             keyword_ip_city=F('keyword_ip_city'),
             count=Count('keywords__keyword'),
             ).order_by('-count'))
+
+        date1 = self.request.GET.get("date1")
+        date2 = self.request.GET.get("date2")
+
+        if date1 is not None:
+            queryset = list(KeywordHistory.objects.filter(keywords=pk, date_created__range=[date1, date2]).values('keyword_ip').annotate(
+            keyword=F('keywords__keyword'),
+            keyword_ip_country_id=F('keyword_ip_country_id'),
+            keyword_ip_country=F('keyword_ip_country'),
+            keyword_ip_region=F('keyword_ip_region'),
+            keyword_ip_city=F('keyword_ip_city'),
+            count=Count('keywords__keyword'),
+            ).order_by('-count'))
         
         if not queryset:
             return JsonResponse({'detail' : 'not found'}, safe=False)
@@ -147,21 +160,7 @@ class LoadCitiesViewSet(viewsets.ModelViewSet):
         return queryset
 
 class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = Keyword.objects.filter(keywords__date_created__range=[datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()]).values('keyword').annotate(
-            lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
-            lastscrape_time=F('lastscrape_time'),
-            lastscrape_products=F('lastscrape_products'),
-            keyword_ip=Value('', output_field=CharField()),
-            keyword_count=Count('keywords__id'),
-            source=Concat(
-                Value('Holahalo Website: '),
-                Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
-                Value('\nHolahalo Mobile Website: '),
-                Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
-                Value('\nHolahalo Android: '),
-                Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
-                output_field=CharField()),
-            ).order_by('-last_created')
+    queryset = Keyword.objects.all()
     serializer_class = serializers.XLSXExportSerializer
     renderer_classes = [XLSXRenderer]
     column_header = {
@@ -201,7 +200,7 @@ class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
             },
             'alignment': {
                 'vertical': 'center',
-                'horizontal': 'left',
+                'horizontal': 'center',
                 'wrapText': True,
                 'shrinkToFit' : True,
             }
@@ -214,20 +213,37 @@ class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
         date1 = self.request.GET.get("date1")
         date2 = self.request.GET.get("date2")
 
-        queryset = Keyword.objects.filter(keywords__date_created__range=[date1, date2]).values('keyword').annotate(
-                lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
-                lastscrape_time=F('lastscrape_time'),
-                lastscrape_products=F('lastscrape_products'),
-                keyword_ip=Value('', output_field=CharField()),
-                keyword_count=Count('keywords__id'),
-                source=Concat(
-                    Value('Holahalo Website: '),
-                    Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
-                    Value('\nHolahalo Mobile Website: '),
-                    Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
-                    Value('\nHolahalo Android: '),
-                    Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
-                    output_field=CharField()),
-                ).order_by('-last_created')
+        keywords = Keyword.objects.filter(keywords__date_created__range=[date1, date2]).distinct().order_by('-last_created')
+        jsonlist = []
+        for keyword in keywords:
+            queryset = KeywordHistory.objects.filter(keywords=keyword.id, date_created__range=[datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()]).values('keyword_ip').annotate(
+                id=F('keywords__id'),
+                keyword_count=Count('keyword_ip')
+                ).order_by('-keyword_count')
+            jsonlist.append(queryset[0])
 
-        return queryset
+        qs = None
+        for index, value in enumerate(jsonlist):
+            queryset = Keyword.objects.filter(id=value['id'], keywords__date_created__range=[date1, date2]).values('keyword').annotate(
+                    lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+                    lastscrape_time=F('lastscrape_time'),
+                    lastscrape_products=F('lastscrape_products'),
+                    keyword_ip=Value(value['keyword_ip'], output_field=CharField()),
+                    keyword_count=Count('keywords__id'),
+                    last_created=F('last_created'),
+                    source=Concat(
+                        Value('Holahalo Website: '),
+                        Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
+                        Value('\nHolahalo Mobile Website: '),
+                        Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
+                        Value('\nHolahalo Android: '),
+                        Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
+                        output_field=CharField()),
+                    )
+
+            if index == 0:
+                qs = queryset
+            else:
+                qs = qs.union(queryset, all=False)
+
+        return qs.order_by('-last_created')
