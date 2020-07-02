@@ -1,5 +1,5 @@
 import datetime
-from django.db.models import Count, Q, Value, CharField, F, Func, Max
+from django.db.models import Count, Q, Value, CharField, F, Func, Max, Case, When
 from django.db.models.functions import Concat
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
@@ -212,6 +212,7 @@ class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         date1 = self.request.GET.get("date1")
         date2 = self.request.GET.get("date2")
+        app = self.request.GET.get("app")
 
         keywords = Keyword.objects.filter(keywords__date_created__range=[date1, date2]).distinct().order_by('-last_created')
         jsonlist = []
@@ -224,21 +225,61 @@ class ExportExcelViewset(XLSXFileMixin, viewsets.ReadOnlyModelViewSet):
 
         qs = None
         for index, value in enumerate(jsonlist):
-            queryset = Keyword.objects.filter(id=value['id'], keywords__date_created__range=[date1, date2]).values('keyword').annotate(
-                    lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
-                    lastscrape_time=F('lastscrape_time'),
-                    lastscrape_products=F('lastscrape_products'),
-                    keyword_ip=Value(value['keyword_ip'], output_field=CharField()),
-                    keyword_count=Count('keywords__id'),
-                    last_created=F('last_created'),
-                    source=Concat(
-                        Value('Holahalo Website: '),
-                        Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
-                        Value('\nHolahalo Mobile Website: '),
-                        Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
-                        Value('\nHolahalo Android: '),
-                        Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
-                        output_field=CharField()),
+            if app == 'all_apps':
+                queryset = Keyword.objects.filter(id=value['id'], keywords__date_created__range=[date1, date2]).values('keyword').annotate(
+                        lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+                        lastscrape_time=F('lastscrape_time'),
+                        lastscrape_products=F('lastscrape_products'),
+                        keyword_ip=Value(value['keyword_ip'], output_field=CharField()),
+                        keyword_count=Count('keywords__id'),
+                        last_created=F('last_created'),
+                        source=Concat(
+                            Value('Holahalo Website: '),
+                            Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
+                            Value('\nHolahalo Mobile Website: '),
+                            Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
+                            Value('\nHolahalo Android: '),
+                            Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
+                            output_field=CharField()),
+                    )
+            elif app == 'holahalo_website':
+                queryset = Keyword.objects.filter(id=value['id'], keywords__date_created__range=[date1, date2]).values('keyword').annotate(
+                        lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+                        lastscrape_time=F('lastscrape_time'),
+                        lastscrape_products=F('lastscrape_products'),
+                        keyword_ip=Value(value['keyword_ip'], output_field=CharField()),
+                        keyword_count=Count('keywords__id'),
+                        last_created=F('last_created'),
+                        source=Concat(
+                            Value('Holahalo Website: '),
+                            Count('keywords__source', filter=Q(keywords__source='Holahalo Website')),
+                            output_field=CharField()),
+                    )
+            elif app == 'holahalo_mobile_website':
+                queryset = Keyword.objects.filter(id=value['id'], keywords__date_created__range=[date1, date2]).values('keyword').annotate(
+                        lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+                        lastscrape_time=F('lastscrape_time'),
+                        lastscrape_products=F('lastscrape_products'),
+                        keyword_ip=Value(value['keyword_ip'], output_field=CharField()),
+                        keyword_count=Count('keywords__id'),
+                        last_created=F('last_created'),
+                        source=Concat(
+                            Value('Holahalo Mobile Website: '),
+                            Count('keywords__source', filter=Q(keywords__source='Holahalo Mobile Website')),
+                            output_field=CharField()),
+                    )
+            elif app == 'holahalo_android':
+                queryset = Keyword.objects.filter(id=value['id'], keywords__date_created__range=[date1, date2]).values('keyword').annotate(
+                        lastscrape_date=Func(F('lastscrape_date'), Value('dd-MM-yyyy'), function='to_char', output_field=CharField()),
+                        lastscrape_time=F('lastscrape_time'),
+                        lastscrape_products=F('lastscrape_products'),
+                        keyword_ip=Value(value['keyword_ip'], output_field=CharField()),
+                        keyword_count=Count('keywords__id'),
+                        last_created=F('last_created'),
+                        source=Concat(
+                            Value('Holahalo Android: '),
+                            Count('keywords__source', filter=Q(keywords__source='Holahalo Android')),
+                            output_field=CharField()),
                     )
 
             if index == 0:
