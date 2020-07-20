@@ -61,8 +61,13 @@ class KeywordHistorySerializer(serializers.ModelSerializer):
                         validated_data['keyword_ip_country'] = pycountry.countries.get(alpha_2=data['country']).name
                         validated_data['keyword_ip_region'] = data['region']
                         validated_data['keyword_ip_city'] = data['city']
-                    else:
+                    elif 'error' in data:
                         validated_data['keyword_ip'] = None
+                        validated_data['keyword_ip_country_id'] = None
+                        validated_data['keyword_ip_country'] = None
+                        validated_data['keyword_ip_region'] = None
+                        validated_data['keyword_ip_city'] = None
+                    else:
                         validated_data['keyword_ip_country_id'] = None
                         validated_data['keyword_ip_country'] = None
                         validated_data['keyword_ip_region'] = None
